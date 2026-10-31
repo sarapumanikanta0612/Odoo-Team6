@@ -80,6 +80,10 @@ public class SecurityConfig {
                         // public
                         .requestMatchers(HttpMethod.GET, "/api/health").permitAll()
                         .requestMatchers("/api/auth/login", "/api/auth/register").permitAll()
+                        // Prospective clients submit enquiries without logging in (SRS 6.1).
+                        // Scoped to POST only: any other method on this path, and any other
+                        // /api/public/** path, still falls through to .anyRequest().authenticated().
+                        .requestMatchers(HttpMethod.POST, "/api/public/enquiries").permitAll()
                         // user management: admin only
                         .requestMatchers("/api/users/**").hasRole("ADMIN")
                         // employees: admin only for CUD; reads also need staff
