@@ -16,6 +16,9 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
+
+import com.wams.security.JwtService;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -34,8 +37,10 @@ import tools.jackson.databind.json.JsonMapper;
  * Web-layer test for POST /api/public/enquiries: JSON binding, validation, status codes and
  * the NEW/WEBSITE rule, using the real EnquiryService and a mocked repository.
  * <p>
- * Security filters are disabled because the security configuration belongs to Dev 1 and
- * does not exist yet. Public access to this path must be tested once it does.
+ * Spring Security filters are skipped at MockMvc level ({@code addFilters = false}) so
+ * these tests focus on controller/service behavior. The anonymous-access guarantee for
+ * {@code POST /api/public/enquiries} is covered end-to-end by
+ * {@code com.wams.config.SecurityConfigIntegrationTest} against the real filter chain.
  */
 @WebMvcTest(PublicEnquiryController.class)
 @AutoConfigureMockMvc(addFilters = false)
@@ -51,6 +56,15 @@ class PublicEnquiryControllerTest {
 
 	@MockitoBean
 	private EnquiryRepository enquiryRepository;
+
+	/**
+	 * {@code @WebMvcTest} loads {@code Filter} beans but not {@code @Service} beans, so
+	 * {@link com.wams.security.JwtAuthenticationFilter} cannot find its {@link JwtService}
+	 * dependency. We provide a mock purely to satisfy construction — the filter is never
+	 * invoked here because {@code addFilters = false}.
+	 */
+	@MockitoBean
+	private JwtService jwtService;
 
 	@Test
 	void validRequest_returns201WithNewWebsiteEnquiry() throws Exception {
