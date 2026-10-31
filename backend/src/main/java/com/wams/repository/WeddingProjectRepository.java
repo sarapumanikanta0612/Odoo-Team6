@@ -11,5 +11,7 @@ public interface WeddingProjectRepository extends JpaRepository<WeddingProject, 
 
     List<WeddingProject> findAllByPrimaryClientId(Long clientId);
 
+    List<WeddingProject> findAllByPartnerClientId(Long clientId);
+
     List<WeddingProject> findAllByLeadPlannerId(Long employeeId);
 }
