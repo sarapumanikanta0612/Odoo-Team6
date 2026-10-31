@@ -40,6 +40,8 @@ The app calls relative paths (`/api/...`). The Vite server proxies them to `VITE
 
 If the backend is down, API calls fail with "Cannot reach the WAMS server".
 
+To sign in as an admin on a fresh database, start the backend with `BOOTSTRAP_ADMIN_EMAIL` and `BOOTSTRAP_ADMIN_PASSWORD` set (DEV 1's admin bootstrap; `BOOTSTRAP_ADMIN_NAME` is optional). Use local values only and never commit them.
+
 ## Structure
 
 ```text
