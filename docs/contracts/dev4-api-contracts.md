@@ -179,7 +179,7 @@ See [`frontend/README.md`](../../frontend/README.md) for structure, the module r
 |---|---|
 | API base | Relative `/api/...`; Vite dev server proxies to `http://localhost:8080` |
 | Auth | `POST /api/auth/login`, `GET /api/auth/me` (DEV 1). Token in `sessionStorage`, sent as `Authorization: Bearer` |
-| 401 | Session cleared, user returned to `/login` |
+| 401 | If `GET /api/auth/me` also rejects the token: session cleared, user returned to `/login`. If the token is still accepted: treated as 403 (role-denied requests currently return 401, issue #3) |
 | 403 | Shown as access denied; session kept |
 | Roles | `ADMIN, LEAD_PLANNER, EMPLOYEE, PRIMARY_CLIENT, PARTNER_CLIENT, VENDOR` |
 | Public pages | `/` (landing), `/login`. Authenticated pages live under `/app/*` |
