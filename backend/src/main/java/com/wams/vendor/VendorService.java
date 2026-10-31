@@ -1,5 +1,7 @@
 package com.wams.vendor;
 
+import com.wams.exception.DuplicateResourceException;
+import com.wams.exception.ResourceNotFoundException;
 import com.wams.vendor.dto.VendorRequest;
 import com.wams.vendor.dto.VendorResponse;
 import jakarta.persistence.criteria.Predicate;
@@ -7,10 +9,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -106,11 +106,11 @@ public class VendorService {
         return (value == null || value.isBlank()) ? null : value.trim();
     }
 
-    private static ResponseStatusException notFound(Long id) {
-        return new ResponseStatusException(HttpStatus.NOT_FOUND, "Vendor " + id + " not found");
+    private static ResourceNotFoundException notFound(Long id) {
+        return new ResourceNotFoundException("Vendor " + id + " not found");
     }
 
-    private static ResponseStatusException duplicateEmail() {
-        return new ResponseStatusException(HttpStatus.CONFLICT, "A vendor with this email already exists");
+    private static DuplicateResourceException duplicateEmail() {
+        return new DuplicateResourceException("A vendor with this email already exists");
     }
 }
