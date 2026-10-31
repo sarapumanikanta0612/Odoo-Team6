@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.wams.security.JwtService;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -34,8 +35,8 @@ import tools.jackson.databind.json.JsonMapper;
  * Web-layer test for POST /api/public/enquiries: JSON binding, validation, status codes and
  * the NEW/WEBSITE rule, using the real EnquiryService and a mocked repository.
  * <p>
- * Security filters are disabled because the security configuration belongs to Dev 1 and
- * does not exist yet. Public access to this path must be tested once it does.
+ * Security filters are disabled in this web-layer test. Anonymous access to this path depends
+ * on SecurityConfig and needs its own test once it is permitted.
  */
 @WebMvcTest(PublicEnquiryController.class)
 @AutoConfigureMockMvc(addFilters = false)
@@ -51,6 +52,9 @@ class PublicEnquiryControllerTest {
 
 	@MockitoBean
 	private EnquiryRepository enquiryRepository;
+
+	@MockitoBean
+	private JwtService jwtService;
 
 	@Test
 	void validRequest_returns201WithNewWebsiteEnquiry() throws Exception {
