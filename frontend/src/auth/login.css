@@ -1,0 +1,129 @@
+.wams-login {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.9fr) minmax(0, 1.1fr);
+  min-height: 100vh;
+  background: var(--wams-ivory);
+}
+
+.wams-login__panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 32px;
+  padding: 36px 44px 44px;
+  overflow: hidden;
+  color: var(--wams-gold-light);
+  background: var(--wams-maroon-deep);
+}
+
+.wams-login__panel::after {
+  content: '';
+  position: absolute;
+  inset: 16px;
+  border: 1px solid rgba(217, 194, 154, 0.22);
+  pointer-events: none;
+}
+
+.wams-login__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--wams-gold-light);
+  text-decoration: none;
+  font-family: var(--wams-font-display);
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.wams-login__brand span {
+  color: var(--wams-ivory);
+}
+
+.wams-login__brand:hover {
+  color: var(--wams-gold-light);
+}
+
+.wams-login__art {
+  width: min(300px, 70%);
+  align-self: center;
+  color: var(--wams-gold-light);
+}
+
+.wams-login__panel-copy h2 {
+  margin: 0 0 10px;
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1.15;
+  color: var(--wams-ivory);
+}
+
+.wams-login__panel-copy p {
+  margin: 0;
+  max-width: 30em;
+  font-size: 15px;
+  line-height: 1.6;
+  color: rgba(250, 246, 238, 0.76);
+}
+
+.wams-login__main {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+}
+
+.wams-login__card {
+  width: 100%;
+  max-width: 400px;
+  animation: wams-rise 0.32s var(--wams-ease) both;
+}
+
+.wams-login__title {
+  margin: 6px 0 6px;
+  font-size: 40px;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--wams-maroon-deep);
+}
+
+.wams-login__hint {
+  margin: 0 0 28px;
+  color: var(--wams-muted);
+}
+
+.wams-login__error {
+  margin-bottom: 20px;
+}
+
+.wams-login__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 28px;
+  color: var(--wams-muted);
+  text-decoration: none;
+}
+
+.wams-login__back:hover {
+  color: var(--wams-maroon);
+}
+
+@media (max-width: 860px) {
+  .wams-login {
+    grid-template-columns: 1fr;
+  }
+
+  .wams-login__panel {
+    flex-direction: row;
+    align-items: center;
+    padding: 20px 24px;
+  }
+
+  .wams-login__panel::after,
+  .wams-login__art,
+  .wams-login__panel-copy {
+    display: none;
+  }
+}
