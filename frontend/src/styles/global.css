@@ -1,0 +1,362 @@
+/*
+ * WAMS global styles. Component styling comes from Ant Design tokens in
+ * src/app/theme.js; this file holds the palette as CSS variables, base
+ * typography and the shared layout classes (prefixed `wams-`).
+ * Keep the palette in sync with theme.js.
+ */
+:root {
+  --wams-ivory: #faf6ee;
+  --wams-ivory-deep: #f3ebdd;
+  --wams-paper: #fffdf8;
+  --wams-maroon: #6b1e2e;
+  --wams-maroon-deep: #4e1421;
+  --wams-gold: #b08d57;
+  --wams-gold-light: #d9c29a;
+  --wams-forest: #2f5d50;
+  --wams-ink: #2a211c;
+  --wams-ink-soft: #4a3f38;
+  --wams-muted: #6f6259;
+  --wams-line: #e6dccb;
+  --wams-line-soft: #efe6d6;
+
+  --wams-font-display: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+  --wams-font-body: 'Hind Madurai', 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+
+  --wams-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--wams-ivory);
+  color: var(--wams-ink);
+  font-family: var(--wams-font-body);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3,
+.ant-typography:is(h1, h2, h3),
+.wams-display {
+  font-family: var(--wams-font-display);
+  /* Cormorant defaults to old-style figures, which read as too small in figures and dates. */
+  font-variant-numeric: lining-nums;
+}
+
+/* Figures line up in tables and summaries. */
+.ant-table,
+.ant-statistic,
+.wams-numeric {
+  font-variant-numeric: tabular-nums;
+}
+
+:focus-visible {
+  outline: 2px solid var(--wams-gold);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* Short entrance used sparingly on public pages. */
+@keyframes wams-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ---------- Shared building blocks ---------- */
+
+.wams-eyebrow {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--wams-maroon);
+}
+
+/* Stepped vimana line used as a thin divider. */
+.wams-temple-rule {
+  height: 10px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='10' viewBox='0 0 20 10'%3E%3Cpath d='M0 9.5h20M2 9.5l3-4h2l3-4 3 4h2l3 4' fill='none' stroke='%23B08D57' stroke-width='1' stroke-opacity='.8'/%3E%3C/svg%3E");
+  background-repeat: repeat-x;
+  background-position: left bottom;
+}
+
+.wams-temple-rule--on-dark {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='10' viewBox='0 0 20 10'%3E%3Cpath d='M0 9.5h20M2 9.5l3-4h2l3-4 3 4h2l3 4' fill='none' stroke='%23D9C29A' stroke-width='1' stroke-opacity='.55'/%3E%3C/svg%3E");
+}
+
+.wams-centered {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 24px;
+}
+
+.wams-centered__label {
+  color: var(--wams-muted);
+}
+
+.wams-error-details {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+
+/* ---------- Page header ---------- */
+
+.wams-page-header {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--wams-line);
+}
+
+.wams-page-header::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  width: 64px;
+  height: 2px;
+  background: var(--wams-gold);
+}
+
+.wams-page-header__title {
+  margin: 4px 0 0;
+  font-size: 32px;
+  font-weight: 600;
+  line-height: 1.15;
+  color: var(--wams-ink);
+}
+
+.wams-page-header__subtitle {
+  margin: 6px 0 0;
+  color: var(--wams-muted);
+}
+
+.wams-page-header__extra {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* ---------- Panels and module cards ---------- */
+
+.wams-panel {
+  padding: 20px 24px 24px;
+  background: var(--wams-paper);
+  border: 1px solid var(--wams-line);
+  border-radius: 6px;
+}
+
+.wams-panel__title {
+  margin: 0 0 16px;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--wams-ink);
+}
+
+.wams-module-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.wams-module-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px 18px;
+  color: var(--wams-ink);
+  text-decoration: none;
+  background: var(--wams-paper);
+  border: 1px solid var(--wams-line);
+  border-radius: 6px;
+  transition:
+    border-color 0.16s var(--wams-ease),
+    transform 0.16s var(--wams-ease);
+}
+
+.wams-module-card:hover {
+  color: var(--wams-ink);
+  border-color: var(--wams-gold);
+  transform: translateY(-1px);
+}
+
+.wams-module-card__icon {
+  color: var(--wams-maroon);
+  font-size: 20px;
+}
+
+.wams-module-card__text {
+  color: var(--wams-muted);
+}
+
+/* ---------- Signed-in shell ---------- */
+
+.wams-shell {
+  min-height: 100vh;
+}
+
+.wams-shell__sider {
+  position: sticky !important;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  border-right: 1px solid rgba(217, 194, 154, 0.18);
+}
+
+.wams-shell__brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 20px 14px;
+  color: var(--wams-gold-light);
+  text-decoration: none;
+}
+
+.wams-shell__brand:hover {
+  color: var(--wams-gold-light);
+}
+
+.wams-shell__brand strong {
+  display: block;
+  font-family: var(--wams-font-display);
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  color: var(--wams-ivory);
+}
+
+.wams-shell__brand small {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(217, 194, 154, 0.8);
+}
+
+.wams-shell__sider .wams-temple-rule {
+  margin: 0 16px 12px;
+}
+
+.wams-shell__header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid var(--wams-line);
+}
+
+.wams-shell__user {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 8px;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  transition:
+    border-color 0.16s var(--wams-ease),
+    background-color 0.16s var(--wams-ease);
+}
+
+.wams-shell__user:hover {
+  background: var(--wams-ivory);
+  border-color: var(--wams-line);
+}
+
+.wams-shell__avatar {
+  background: var(--wams-maroon);
+}
+
+.wams-shell__user-name {
+  font-weight: 500;
+}
+
+.wams-shell__role {
+  margin: 0;
+  color: var(--wams-maroon);
+  border-color: var(--wams-gold-light);
+}
+
+.wams-shell__content {
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 28px 32px 48px;
+}
+
+@media (max-width: 991.98px) {
+  .wams-shell__sider {
+    position: fixed !important;
+    left: 0;
+    z-index: 40;
+  }
+
+  .wams-shell__backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 35;
+    background: rgba(42, 33, 28, 0.38);
+  }
+
+  .wams-shell__content {
+    padding: 20px 16px 32px;
+  }
+
+  .wams-shell__user-name {
+    display: none;
+  }
+}

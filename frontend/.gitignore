@@ -1,0 +1,18 @@
+# Dependencies and build output
+node_modules
+dist
+dist-ssr
+.vite
+
+# Local environment overrides (never commit secrets)
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor
+.idea
+.DS_Store
+*.local
