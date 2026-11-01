@@ -91,11 +91,11 @@ Install the versions agreed by the team:
 - Maven (or use the Maven wrapper)
 - PostgreSQL
 
-Exact version numbers should be pinned in the project configuration before the team begins integration.
+The repository currently requires Java 21 (see `backend/pom.xml`), Node.js compatible with `frontend/package.json`, and PostgreSQL.
 
 ## Local setup
 
-The commands below are a setup template. Update directory names, ports, environment variable names and scripts to match the actual repository before handing this README to users.
+The commands below match the environment variables and ports used by the application.
 
 ### 1. Clone the repository
 
@@ -121,15 +121,30 @@ For PostgreSQL versions/configurations that require schema privileges, grant the
 Create the backend environment configuration using the variable names implemented by the application. Example values:
 
 ```env
+# Required PostgreSQL connection settings
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=wams_db
 DB_USERNAME=wams_user
 DB_PASSWORD=change_this_local_password
+
+# Required. Use at least 32 random bytes; never use a sample or committed value.
+JWT_SECRET=<secure-random-secret-at-least-32-bytes>
+
+# Optional runtime settings
 SERVER_PORT=8080
+CORS_ORIGINS=http://localhost:5173,http://localhost:3000
+
+# Optional first-admin bootstrap. Set email and password together on a clean DB.
+BOOTSTRAP_ADMIN_EMAIL=admin@example.com
+BOOTSTRAP_ADMIN_PASSWORD=<strong-local-password>
+BOOTSTRAP_ADMIN_NAME=Agency Administrator
+BOOTSTRAP_ADMIN_EMPLOYEE_CODE=ADMIN-001
 ```
 
-Do not commit real passwords, SMTP credentials, signing keys or production secrets. Keep `.env.example` free of secrets.
+`DB_HOST`, `DB_NAME`, `DB_USERNAME`, `DB_PASSWORD`, and `JWT_SECRET` have no application defaults. Startup fails when any required value is missing. `DB_PORT` defaults to `5432`. The bootstrap Employee code defaults to `ADMIN-001` and must be unique.
+
+Do not commit real passwords, database credentials, signing keys or production secrets. Environment files containing real values must remain local.
 
 ### 4. Start the backend
 

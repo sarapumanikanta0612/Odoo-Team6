@@ -1,17 +1,21 @@
 package com.wams.entity;
 
+import com.wams.enquiry.Enquiry;
 import com.wams.enums.ProjectStatus;
+import com.wams.qualification.PaymentMethod;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 /**
  * Represents an officially confirmed wedding engagement.
  *
- * Business invariant (enforced in {@code WeddingProjectService.create}):
- *   A WeddingProject row MUST NOT exist unless both {@code agreementSigned}
- *   AND {@code bookingDepositPaid} were true at the moment of creation.
+ * New projects carry a unique Enquiry provenance link and are created only by
+ * WeddingProjectService after it verifies persisted SIGNED Agreement and PAID
+ * BookingDeposit records. The two booleans are a read-only qualification
+ * snapshot retained for response and legacy-row compatibility.
  */
 @Getter
 @Setter
@@ -19,7 +23,8 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @Builder
 @Entity
-@Table(name = "wedding_projects")
+@Table(name = "wedding_projects",
+        uniqueConstraints = @UniqueConstraint(name = "uk_wedding_projects_enquiry", columnNames = "enquiry_id"))
 public class WeddingProject extends BaseEntity {
 
     @Id
@@ -28,6 +33,15 @@ public class WeddingProject extends BaseEntity {
 
     @Column(name = "project_name", nullable = false, length = 200)
     private String projectName;
+
+    /**
+     * Qualification provenance. Nullable only so existing pre-P0 rows can be
+     * loaded; every new project created by the service must set it.
+     */
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "enquiry_id",
+            foreignKey = @ForeignKey(name = "fk_project_enquiry"))
+    private Enquiry enquiry;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "primary_client_id", nullable = false,
@@ -49,6 +63,26 @@ public class WeddingProject extends BaseEntity {
 
     @Column(name = "venue", length = 300)
     private String venue;
+
+    /** Immutable commercial/payment snapshots captured at conversion for finance. */
+    @Column(name = "selected_package", length = 200)
+    private String selectedPackage;
+
+    @Column(name = "agreed_amount", precision = 14, scale = 2)
+    private BigDecimal agreedAmount;
+
+    @Column(name = "booking_deposit_amount", precision = 14, scale = 2)
+    private BigDecimal bookingDepositAmount;
+
+    @Column(name = "booking_deposit_reference", length = 100)
+    private String bookingDepositReference;
+
+    @Column(name = "booking_deposit_paid_on")
+    private LocalDate bookingDepositPaidOn;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "booking_deposit_method", length = 30)
+    private PaymentMethod bookingDepositMethod;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "project_status", nullable = false, length = 30)

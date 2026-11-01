@@ -32,6 +32,12 @@ export const router = createBrowserRouter([
     errorElement: <RouteErrorPage />,
   },
   {
+    path: '/enquire',
+    lazy: lazyPage(() => import('../modules/enquiry/PublicEnquiryPage')),
+    hydrateFallbackElement: pageLoading,
+    errorElement: <RouteErrorPage />,
+  },
+  {
     path: '/login',
     lazy: lazyPage(() => import('../auth/LoginPage')),
     hydrateFallbackElement: pageLoading,

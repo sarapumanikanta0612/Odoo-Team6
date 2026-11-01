@@ -5,6 +5,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
 /** Body for admin create (POST) and update (PUT). Status is not editable here. */
@@ -18,6 +19,7 @@ public record VendorRequest(
         String phone,
         @Size(max = 100) String city,
         @Size(max = 255) String address,
-        @Size(max = 2000) String serviceDescription
+        @Size(max = 2000) String serviceDescription,
+        @Positive Long userId
 ) {
 }

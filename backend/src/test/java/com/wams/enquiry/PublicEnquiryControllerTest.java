@@ -17,6 +17,7 @@ import java.util.Map;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
+import com.wams.repository.UserRepository;
 import com.wams.security.JwtService;
 
 import org.junit.jupiter.api.Test;
@@ -59,12 +60,15 @@ class PublicEnquiryControllerTest {
 
 	/**
 	 * {@code @WebMvcTest} loads {@code Filter} beans but not {@code @Service} beans, so
-	 * {@link com.wams.security.JwtAuthenticationFilter} cannot find its {@link JwtService}
-	 * dependency. We provide a mock purely to satisfy construction — the filter is never
-	 * invoked here because {@code addFilters = false}.
+	 * {@link com.wams.security.JwtAuthenticationFilter} cannot find its JwtService and
+	 * UserRepository dependencies. We provide mocks purely to satisfy construction —
+	 * the filter is never invoked here because {@code addFilters = false}.
 	 */
 	@MockitoBean
 	private JwtService jwtService;
+
+	@MockitoBean
+	private UserRepository userRepository;
 
 	@Test
 	void validRequest_returns201WithNewWebsiteEnquiry() throws Exception {

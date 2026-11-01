@@ -1,7 +1,7 @@
 package com.wams.config;
 
 import com.wams.security.JwtAuthenticationFilter;
-import jakarta.servlet.http.HttpServletResponse;
+import com.wams.security.RestSecurityErrorHandler;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -29,11 +29,14 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtFilter;
+    private final RestSecurityErrorHandler securityErrorHandler;
     private final String allowedOriginsRaw;
 
     public SecurityConfig(JwtAuthenticationFilter jwtFilter,
+                          RestSecurityErrorHandler securityErrorHandler,
                           @Value("${app.cors.allowed-origins}") String allowedOriginsRaw) {
         this.jwtFilter = jwtFilter;
+        this.securityErrorHandler = securityErrorHandler;
         this.allowedOriginsRaw = allowedOriginsRaw;
     }
 
@@ -84,6 +87,8 @@ public class SecurityConfig {
                         // Scoped to POST only: any other method on this path, and any other
                         // /api/public/** path, still falls through to .anyRequest().authenticated().
                         .requestMatchers(HttpMethod.POST, "/api/public/enquiries").permitAll()
+                        // Internal enquiry, follow-up, commercial and qualification records.
+                        .requestMatchers("/api/enquiries/**").hasAnyRole("ADMIN", "LEAD_PLANNER")
                         // user management: admin only
                         .requestMatchers("/api/users/**").hasRole("ADMIN")
                         // employees: admin only for CUD; reads also need staff
@@ -99,8 +104,8 @@ public class SecurityConfig {
                         // anything else authenticated by default
                         .anyRequest().authenticated())
                 .exceptionHandling(ex -> ex
-                        .authenticationEntryPoint((req, res, e) -> res.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Authentication required"))
-                        .accessDeniedHandler((req, res, e) -> res.sendError(HttpServletResponse.SC_FORBIDDEN, "Access denied")))
+                        .authenticationEntryPoint(securityErrorHandler)
+                        .accessDeniedHandler(securityErrorHandler))
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

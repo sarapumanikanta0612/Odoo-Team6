@@ -1,0 +1,135 @@
+.wams-resource-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.wams-resource-toolbar__filters {
+  display: flex;
+  flex: 1 1 480px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.wams-resource-toolbar__filters > * {
+  min-width: 160px;
+}
+
+.wams-resource-summary {
+  color: var(--wams-muted);
+}
+
+.wams-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 16px;
+}
+
+.wams-form-grid__wide {
+  grid-column: 1 / -1;
+}
+
+.wams-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.wams-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.wams-inline-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.wams-qualification-status {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.wams-qualification-status__item {
+  padding: 14px 16px;
+  background: var(--wams-ivory);
+  border: 1px solid var(--wams-line);
+  border-radius: 4px;
+}
+
+.wams-qualification-status__item span:first-child {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--wams-muted);
+}
+
+.wams-public-form-page {
+  min-height: 100vh;
+  padding: 40px 20px;
+  background: var(--wams-ivory);
+}
+
+.wams-public-form {
+  width: min(860px, 100%);
+  margin: 0 auto;
+  padding: 28px;
+  background: var(--wams-paper);
+  border: 1px solid var(--wams-line);
+  border-top: 3px solid var(--wams-maroon);
+  border-radius: 6px;
+}
+
+.wams-public-form__head {
+  margin-bottom: 24px;
+}
+
+.wams-public-form__head h1 {
+  margin: 6px 0;
+  font-size: 38px;
+  color: var(--wams-maroon-deep);
+}
+
+.wams-public-form__head p {
+  margin: 0;
+  color: var(--wams-muted);
+}
+
+@media (max-width: 720px) {
+  .wams-form-grid,
+  .wams-qualification-status {
+    grid-template-columns: 1fr;
+  }
+
+  .wams-form-grid__wide {
+    grid-column: auto;
+  }
+
+  .wams-public-form {
+    padding: 20px 16px;
+  }
+}
+
+.wams-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+  color: var(--wams-muted);
+  text-decoration: none;
+}
+
+.wams-back-link:hover {
+  color: var(--wams-maroon);
+}
+
+.wams-public-form__head > svg {
+  display: block;
+  margin-bottom: 12px;
+  color: var(--wams-gold);
+}

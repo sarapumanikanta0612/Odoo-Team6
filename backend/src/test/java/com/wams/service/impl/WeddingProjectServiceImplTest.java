@@ -2,6 +2,11 @@ package com.wams.service.impl;
 
 import com.wams.dto.request.CreateProjectRequest;
 import com.wams.dto.response.ProjectResponse;
+import com.wams.enquiry.Enquiry;
+import com.wams.enquiry.EnquiryAccessService;
+import com.wams.enquiry.EnquiryRepository;
+import com.wams.enquiry.EnquiryStatus;
+import com.wams.enquiry.PrimaryClientAssociationService;
 import com.wams.entity.Client;
 import com.wams.entity.Employee;
 import com.wams.entity.User;
@@ -10,6 +15,12 @@ import com.wams.enums.ProjectStatus;
 import com.wams.enums.Role;
 import com.wams.exception.BusinessRuleException;
 import com.wams.exception.ResourceNotFoundException;
+import com.wams.qualification.Agreement;
+import com.wams.qualification.AgreementRepository;
+import com.wams.qualification.AgreementStatus;
+import com.wams.qualification.BookingDeposit;
+import com.wams.qualification.BookingDepositRepository;
+import com.wams.qualification.BookingDepositStatus;
 import com.wams.repository.ClientRepository;
 import com.wams.repository.EmployeeRepository;
 import com.wams.repository.WeddingProjectRepository;
@@ -33,14 +44,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 /**
- * Covers the booking-gate truth table defined in the SRS:
- *
- *   signed | paid | result
- *   -------+------+----------
- *   true   | true | ALLOWED
- *   true   | false| REJECTED
- *   false  | true | REJECTED
- *   false  | false| REJECTED
+ * Covers persisted booking qualification, association validation, role-scoped
+ * reads/updates, and active authorized lead assignment.
  */
 @ExtendWith(MockitoExtension.class)
 class WeddingProjectServiceImplTest {
@@ -48,11 +53,19 @@ class WeddingProjectServiceImplTest {
     @Mock WeddingProjectRepository projectRepository;
     @Mock ClientRepository clientRepository;
     @Mock EmployeeRepository employeeRepository;
+    @Mock EnquiryRepository enquiryRepository;
+    @Mock AgreementRepository agreementRepository;
+    @Mock BookingDepositRepository bookingDepositRepository;
+    @Mock EnquiryAccessService enquiryAccessService;
+    @Mock PrimaryClientAssociationService clientAssociationService;
     @Mock AuthenticatedUserProvider authenticatedUserProvider;
     @InjectMocks WeddingProjectServiceImpl service;
 
     private Client primaryClient;
     private Employee leadPlanner;
+    private Enquiry enquiry;
+    private Agreement signedAgreement;
+    private BookingDeposit paidDeposit;
 
     @BeforeEach
     void init() {
@@ -61,106 +74,166 @@ class WeddingProjectServiceImplTest {
 
         User plannerUser = User.builder().id(20L).role(Role.LEAD_PLANNER).active(true).build();
         leadPlanner = Employee.builder().id(200L).user(plannerUser).active(true).build();
+
+        enquiry = new Enquiry();
+        enquiry.setId(300L);
+        enquiry.setStatus(EnquiryStatus.NEW);
+        signedAgreement = Agreement.builder().enquiry(enquiry).status(AgreementStatus.SIGNED).build();
+        paidDeposit = BookingDeposit.builder().enquiry(enquiry).status(BookingDepositStatus.PAID).build();
+
+        lenient().when(authenticatedUserProvider.requireCurrentUser()).thenReturn(
+                User.builder().id(1L).role(Role.ADMIN).active(true).build());
+        lenient().when(enquiryRepository.findByIdForUpdate(300L)).thenReturn(Optional.of(enquiry));
+        lenient().when(agreementRepository.findByEnquiryId(300L)).thenReturn(Optional.of(signedAgreement));
+        lenient().when(bookingDepositRepository.findByEnquiryId(300L)).thenReturn(Optional.of(paidDeposit));
+        lenient().when(clientAssociationService.resolveForConversion(any(Enquiry.class), any(User.class)))
+                .thenReturn(primaryClient);
     }
 
-    // ---------- GATE TRUTH TABLE ----------
+    // ---------- PERSISTED BOOKING GATE ----------
 
     @Test
-    void create_allowed_whenAgreementSigned_andDepositPaid() {
-        when(clientRepository.findById(100L)).thenReturn(Optional.of(primaryClient));
+    void create_allowed_onlyWhenPersistedAgreementSigned_andDepositPaid() {
         when(employeeRepository.findById(200L)).thenReturn(Optional.of(leadPlanner));
-        when(projectRepository.save(any(WeddingProject.class))).thenAnswer(inv -> {
-            WeddingProject p = inv.getArgument(0);
-            p.setId(1L);
-            return p;
+        when(projectRepository.save(any(WeddingProject.class))).thenAnswer(invocation -> {
+            WeddingProject project = invocation.getArgument(0);
+            project.setId(1L);
+            return project;
         });
 
-        ProjectResponse resp = service.create(req(true, true));
+        ProjectResponse response = service.create(req());
 
-        assertThat(resp.getId()).isEqualTo(1L);
+        assertThat(response.getId()).isEqualTo(1L);
+        assertThat(response.getEnquiryId()).isEqualTo(300L);
         ArgumentCaptor<WeddingProject> captor = ArgumentCaptor.forClass(WeddingProject.class);
         verify(projectRepository).save(captor.capture());
         WeddingProject saved = captor.getValue();
+        assertThat(saved.getEnquiry()).isSameAs(enquiry);
         assertThat(saved.isAgreementSigned()).isTrue();
         assertThat(saved.isBookingDepositPaid()).isTrue();
         assertThat(saved.getProjectStatus()).isEqualTo(ProjectStatus.PLANNING);
+        assertThat(enquiry.getStatus()).isEqualTo(EnquiryStatus.CONVERTED);
+        verify(enquiryRepository).save(enquiry);
     }
 
     @Test
-    void create_rejected_whenAgreementSignedButDepositUnpaid() {
-        assertThatThrownBy(() -> service.create(req(true, false)))
-                .isInstanceOf(BusinessRuleException.class)
-                .hasMessageContaining("bookingDepositPaid=false");
-        verify(projectRepository, never()).save(any());
-        verify(clientRepository, never()).findById(any());
-        verify(employeeRepository, never()).findById(any());
-    }
+    void create_rejected_whenPersistedAgreementMissing() {
+        when(agreementRepository.findByEnquiryId(300L)).thenReturn(Optional.empty());
 
-    @Test
-    void create_rejected_whenAgreementUnsignedButDepositPaid() {
-        assertThatThrownBy(() -> service.create(req(false, true)))
+        assertThatThrownBy(() -> service.create(req()))
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessageContaining("agreementSigned=false");
         verify(projectRepository, never()).save(any());
     }
 
     @Test
-    void create_rejected_whenBothFalse() {
-        assertThatThrownBy(() -> service.create(req(false, false)))
-                .isInstanceOf(BusinessRuleException.class);
+    void create_rejected_whenPersistedAgreementIsNotSigned() {
+        signedAgreement.setStatus(AgreementStatus.PENDING);
+
+        assertThatThrownBy(() -> service.create(req()))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("agreementSigned=false");
+        verify(projectRepository, never()).save(any());
+    }
+
+    @Test
+    void create_rejected_whenPersistedDepositMissing() {
+        when(bookingDepositRepository.findByEnquiryId(300L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.create(req()))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("bookingDepositPaid=false");
+        verify(projectRepository, never()).save(any());
+    }
+
+    @Test
+    void create_rejected_whenPersistedDepositIsNotPaid() {
+        paidDeposit.setStatus(BookingDepositStatus.REFUNDED);
+
+        assertThatThrownBy(() -> service.create(req()))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("bookingDepositPaid=false");
+        verify(projectRepository, never()).save(any());
+    }
+
+    @Test
+    void create_rejected_whenEnquiryAlreadyHasProject() {
+        when(projectRepository.existsByEnquiryId(300L)).thenReturn(true);
+
+        assertThatThrownBy(() -> service.create(req()))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("already converted");
+        verify(projectRepository, never()).save(any());
+    }
+
+    @Test
+    void create_rejected_whenEnquiryIsLost() {
+        enquiry.setStatus(EnquiryStatus.LOST);
+
+        assertThatThrownBy(() -> service.create(req()))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("lost enquiry");
         verify(projectRepository, never()).save(any());
     }
 
     // ---------- ASSOCIATION VALIDATION ----------
 
     @Test
-    void create_rejected_whenPrimaryClientMissing() {
-        when(clientRepository.findById(100L)).thenReturn(Optional.empty());
-        assertThatThrownBy(() -> service.create(req(true, true)))
+    void create_rejected_whenPrimaryClientAssociationFails() {
+        when(clientAssociationService.resolveForConversion(any(Enquiry.class), any(User.class)))
+                .thenThrow(new ResourceNotFoundException("Primary client not found"));
+        assertThatThrownBy(() -> service.create(req()))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("Primary client");
     }
 
     @Test
     void create_rejected_whenLeadPlannerMissing() {
-        when(clientRepository.findById(100L)).thenReturn(Optional.of(primaryClient));
         when(employeeRepository.findById(200L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.create(req(true, true)))
+        assertThatThrownBy(() -> service.create(req()))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("Lead planner");
     }
 
     @Test
-    void create_rejected_whenPrimaryClientUserHasWrongRole() {
-        primaryClient.getUser().setRole(Role.VENDOR); // not PRIMARY_CLIENT
-        when(clientRepository.findById(100L)).thenReturn(Optional.of(primaryClient));
+    void create_rejected_whenPrimaryClientAssociationHasWrongRole() {
+        when(clientAssociationService.resolveForConversion(any(Enquiry.class), any(User.class)))
+                .thenThrow(new BusinessRuleException("Linked client must belong to a PRIMARY_CLIENT account"));
 
-        assertThatThrownBy(() -> service.create(req(true, true)))
+        assertThatThrownBy(() -> service.create(req()))
                 .isInstanceOf(BusinessRuleException.class)
-                .hasMessageContaining("PRIMARY_CLIENT role");
+                .hasMessageContaining("PRIMARY_CLIENT");
     }
 
     @Test
     void create_rejected_whenLeadPlannerUserHasWrongRole() {
         leadPlanner.getUser().setRole(Role.EMPLOYEE); // not LEAD_PLANNER/ADMIN
-        when(clientRepository.findById(100L)).thenReturn(Optional.of(primaryClient));
         when(employeeRepository.findById(200L)).thenReturn(Optional.of(leadPlanner));
 
-        assertThatThrownBy(() -> service.create(req(true, true)))
+        assertThatThrownBy(() -> service.create(req()))
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessageContaining("LEAD_PLANNER");
     }
 
     @Test
-    void create_rejected_whenLeadPlannerInactive() {
+    void create_rejected_whenLeadPlannerEmployeeInactive() {
         leadPlanner.setActive(false);
-        when(clientRepository.findById(100L)).thenReturn(Optional.of(primaryClient));
         when(employeeRepository.findById(200L)).thenReturn(Optional.of(leadPlanner));
 
-        assertThatThrownBy(() -> service.create(req(true, true)))
+        assertThatThrownBy(() -> service.create(req()))
                 .isInstanceOf(BusinessRuleException.class)
-                .hasMessageContaining("not active");
+                .hasMessageContaining("both be active");
+    }
+
+    @Test
+    void create_rejected_whenLeadPlannerUserInactive() {
+        leadPlanner.getUser().setActive(false);
+        when(employeeRepository.findById(200L)).thenReturn(Optional.of(leadPlanner));
+
+        assertThatThrownBy(() -> service.create(req()))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("both be active");
     }
 
     // ---------- READ SCOPE: list() ----------
@@ -410,6 +483,66 @@ class WeddingProjectServiceImplTest {
     }
 
     @Test
+    void update_admin_rejectsInactiveEmployeeLead_beforeMutation() {
+        User adminUser = User.builder().id(1L).role(Role.ADMIN).active(true).build();
+        Employee replacement = Employee.builder().id(301L)
+                .user(User.builder().id(31L).role(Role.LEAD_PLANNER).active(true).build())
+                .active(false)
+                .build();
+        WeddingProject existing = sampleProject(708L);
+        existing.setVenue("Original Venue");
+        when(authenticatedUserProvider.requireCurrentUser()).thenReturn(adminUser);
+        when(projectRepository.findById(708L)).thenReturn(Optional.of(existing));
+        when(employeeRepository.findById(301L)).thenReturn(Optional.of(replacement));
+
+        assertThatThrownBy(() -> service.update(708L,
+                new com.wams.dto.request.UpdateProjectRequest(
+                        null, null, "Must Not Apply", null, null, 301L)))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("both be active");
+        assertThat(existing.getVenue()).isEqualTo("Original Venue");
+        assertThat(existing.getLeadPlanner()).isSameAs(leadPlanner);
+    }
+
+    @Test
+    void update_admin_rejectsInactiveUserLead() {
+        User adminUser = User.builder().id(1L).role(Role.ADMIN).active(true).build();
+        Employee replacement = Employee.builder().id(302L)
+                .user(User.builder().id(32L).role(Role.LEAD_PLANNER).active(false).build())
+                .active(true)
+                .build();
+        WeddingProject existing = sampleProject(709L);
+        when(authenticatedUserProvider.requireCurrentUser()).thenReturn(adminUser);
+        when(projectRepository.findById(709L)).thenReturn(Optional.of(existing));
+        when(employeeRepository.findById(302L)).thenReturn(Optional.of(replacement));
+
+        assertThatThrownBy(() -> service.update(709L,
+                new com.wams.dto.request.UpdateProjectRequest(
+                        null, null, null, null, null, 302L)))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("both be active");
+    }
+
+    @Test
+    void update_admin_rejectsEmployeeRoleAsLead() {
+        User adminUser = User.builder().id(1L).role(Role.ADMIN).active(true).build();
+        Employee replacement = Employee.builder().id(303L)
+                .user(User.builder().id(33L).role(Role.EMPLOYEE).active(true).build())
+                .active(true)
+                .build();
+        WeddingProject existing = sampleProject(710L);
+        when(authenticatedUserProvider.requireCurrentUser()).thenReturn(adminUser);
+        when(projectRepository.findById(710L)).thenReturn(Optional.of(existing));
+        when(employeeRepository.findById(303L)).thenReturn(Optional.of(replacement));
+
+        assertThatThrownBy(() -> service.update(710L,
+                new com.wams.dto.request.UpdateProjectRequest(
+                        null, null, null, null, null, 303L)))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("LEAD_PLANNER or ADMIN");
+    }
+
+    @Test
     void update_leadPlanner_differentLeadPlannerId_returns403_beforeAnyMutation() {
         User plannerUser = leadPlanner.getUser();
         WeddingProject owned = sampleProject(706L);
@@ -592,7 +725,7 @@ class WeddingProjectServiceImplTest {
         return p;
     }
 
-    private CreateProjectRequest req(boolean signed, boolean paid) {
+    private CreateProjectRequest req() {
         return new CreateProjectRequest(
                 "Alice & Bob Wedding",
                 100L,
@@ -600,8 +733,7 @@ class WeddingProjectServiceImplTest {
                 200L,
                 LocalDate.now().plusDays(90),
                 "Taj Palace, Jaipur",
-                signed,
-                paid
+                300L
         );
     }
 }
