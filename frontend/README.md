@@ -1,6 +1,6 @@
 # WAMS frontend
 
-React + Ant Design client for the Wedding Agency Management System. It holds the public landing page, sign-in, and the signed-in shell that every module (enquiries, projects, vendors, finance, ...) plugs into.
+React + Ant Design client for the Wedding Agency Management System. It includes the public landing/enquiry flow, sign-in, and role-aware API-backed modules for users, employees, clients, qualified projects and vendors.
 
 Maintainer of the shared shell: DEV 4. Module pages belong to their module owners.
 
@@ -51,28 +51,44 @@ src/
     App.jsx                providers: theme > antd App > auth > router
     router.jsx             route map (do not add module routes here)
     modules.js             module registry: register your module here
+    moduleSections.js      sidebar section constants (avoids registry cycles)
     theme.js               Temple Luxe palette and Ant Design tokens
     layouts/AppLayout.jsx  signed-in shell: sidebar, user menu
     pages/                 workspace home, 404, route error page
   auth/                    session storage, AuthProvider/useAuth, guards, sign-in page
   services/apiClient.js    the only way to call the backend
-  hooks/useApiQuery.js     load data with loading/error state
-  components/              PageHeader, ApiErrorAlert, FullPageSpinner, TempleArt
-  utils/format.js          formatINR, formatDate, formatDateTime
-  styles/global.css        palette CSS variables and shared `wams-` classes
+  hooks/                   useApiQuery and useApiMutation
+  components/              PageHeader, ApiErrorAlert, ResourceFormModal, StatusTag, TempleArt
+  utils/format.js          formatINR, dates and enum labels
+  styles/                  global shell/theme primitives and resource-page layouts
   modules/
-    landing/               public landing page (DEV 4)
-    <your-module>/         one folder per module
+    landing/               public platform overview
+    enquiry/               public persisted enquiry form
+    enquiries/             scoped internal pipeline and conversion workflow
+    users/                 admin account management
+    employees/             admin edit / planner read-only directory
+    clients/               admin/planner client profiles
+    projects/              scoped projects and staff qualification flow
+    vendors/               admin/planner directory and vendor self-profile
 ```
 
 ## Routes
 
 | Path | Page | Access |
 |---|---|---|
-| `/` | Landing page | Public. No API calls, no app shell |
+| `/` | Platform landing page | Public; no app shell |
+| `/enquire` | Validated public enquiry form | Public; persists through `/api/public/enquiries` |
 | `/login` | Sign-in | Public |
-| `/app` | Workspace home | Signed in |
-| `/app/<module.path>/...` | Module pages | Roles listed in the module descriptor |
+| `/app` | Role-aware workspace home | Signed in |
+| `/app/users` | User accounts | Admin |
+| `/app/employees` | Employee directory | Admin writes; lead planner reads |
+| `/app/clients` | Client profiles | Admin, lead planner |
+| `/app/enquiries` | Scoped enquiry pipeline | Admin all; lead planner assigned only |
+| `/app/enquiries/:id` | Follow-up, package, qualification and conversion | Admin or assigned lead planner |
+| `/app/projects` | Scoped wedding projects | Admin, lead planner, primary/partner client |
+| `/app/projects/qualification/*` | Compatibility redirect to Enquiries | Admin, lead planner |
+| `/app/vendors` | Vendor directory or own profile | Admin/planner directory; vendor own record |
+| `/app/<module.path>/...` | Future registered modules | Roles listed in descriptor |
 
 Anonymous visitors who open `/app/...` are sent to `/login` and returned to that page after sign-in.
 
@@ -83,7 +99,7 @@ Anonymous visitors who open `/app/...` are sent to `/login` and returned to that
 
    ```jsx
    import { ShopOutlined } from '@ant-design/icons'
-   import { SECTIONS } from '../../app/modules'
+   import { SECTIONS } from '../../app/moduleSections'
    import { ROLES } from '../../auth/roles'
    import VendorListPage from './VendorListPage'
    import VendorDetailPage from './VendorDetailPage'
@@ -139,7 +155,7 @@ await api.put(`/api/vendors/${id}`, values)
 
 - The bearer token is added automatically. Pass `{ auth: false }` only for public endpoints.
 - Failures throw `ApiError` with `status`, `message` (the backend's `ApiError.message`) and `details` (field errors such as `email: must not be blank`). `status` is 0 when the server is unreachable.
-- A 401 caused by a rejected token signs the user out. A 401 while the token is still valid is reported as 403 and keeps the session; the backend currently returns 401 for role-denied requests (issue #3).
+- A 401 caused by a missing, expired, disabled or otherwise rejected token signs the user out. A 403 keeps the session and displays access denied.
 - Show failures honestly with `<ApiErrorAlert>`. With Ant Design forms, map `details` to field errors if you need per-field messages.
 
 ## Auth and roles
@@ -168,7 +184,10 @@ The session (JWT from `POST /api/auth/login`) is kept in `sessionStorage` for th
 
 ## Known limitations
 
-- Role-denied requests return 401 from the backend, so the client re-checks the token before deciding (issue #3).
-- No server-side logout; a token stays valid until it expires.
+- Agreement/deposit workflows store one current record per enquiry. They do not yet provide append-only legal/payment history.
+- Employees have no assignment/task/self-service API yet, so their workspace intentionally has no business module.
+- Vendor self-service is read-only; vendor approval/status transition and self-update APIs do not exist.
+- No business resource currently has a DELETE endpoint. User access can be deactivated instead.
+- No server-side logout; a token stays valid until it expires or the account is changed/disabled.
 - Fonts (Cormorant Garamond, Hind Madurai) load from Google Fonts. Offline, the page falls back to Georgia and the system sans-serif.
 - Client self-registration and password reset have no screens yet; the sign-in page offers neither.

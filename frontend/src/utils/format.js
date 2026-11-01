@@ -24,6 +24,15 @@ export function formatINR(value, { whole = false } = {}) {
   return (whole ? inrWhole : inr).format(number)
 }
 
+export function humanizeEnum(value) {
+  if (value === null || value === undefined || value === '') return 'Not recorded'
+  return String(value)
+    .toLowerCase()
+    .split('_')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+}
+
 /** "2026-12-04" -> "04 Dec 2026" */
 export function formatDate(value) {
   if (!value) return EMPTY_VALUE

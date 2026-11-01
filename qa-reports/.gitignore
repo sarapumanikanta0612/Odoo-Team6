@@ -1,0 +1,4 @@
+# QA artifacts may contain generated demo credentials and local runtime evidence.
+# Keep everything in this folder local.
+*
+!.gitignore

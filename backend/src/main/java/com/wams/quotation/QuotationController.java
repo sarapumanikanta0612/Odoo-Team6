@@ -1,0 +1,7 @@
+package com.wams.quotation;import com.wams.quotation.dto.*;import jakarta.validation.Valid;import lombok.RequiredArgsConstructor;import org.springframework.http.HttpStatus;import org.springframework.security.access.prepost.PreAuthorize;import org.springframework.web.bind.annotation.*;import java.util.List;
+@RestController@RequiredArgsConstructor public class QuotationController{private final QuotationService service;
+@PostMapping("/api/projects/{projectId}/quotation-requests")@ResponseStatus(HttpStatus.CREATED)@PreAuthorize("hasAnyRole('ADMIN','LEAD_PLANNER')")public QuotationResponse create(@PathVariable Long projectId,@Valid@RequestBody CreateQuotationRequest r){return service.create(projectId,r);}
+@GetMapping("/api/projects/{projectId}/quotation-requests")@PreAuthorize("hasAnyRole('ADMIN','LEAD_PLANNER','PRIMARY_CLIENT')")public List<QuotationResponse> project(@PathVariable Long projectId){return service.projectQuotes(projectId);}
+@GetMapping("/api/quotation-requests/mine")@PreAuthorize("hasRole('VENDOR')")public List<QuotationResponse> mine(){return service.mine();}
+@PutMapping("/api/quotation-requests/{id}/submission")@PreAuthorize("hasRole('VENDOR')")public QuotationResponse submit(@PathVariable Long id,@Valid@RequestBody SubmitQuotationRequest r){return service.submit(id,r);}
+@PostMapping("/api/quotation-requests/{id}/decision")@PreAuthorize("hasRole('PRIMARY_CLIENT')")public QuotationResponse decide(@PathVariable Long id,@Valid@RequestBody QuotationDecisionRequest r){return service.decide(id,r);}}

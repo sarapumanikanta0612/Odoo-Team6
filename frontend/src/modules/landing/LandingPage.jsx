@@ -1,13 +1,11 @@
 import {
-  BarChartOutlined,
   InboxOutlined,
+  ProjectOutlined,
   SafetyCertificateOutlined,
-  ScheduleOutlined,
   ShopOutlined,
   TeamOutlined,
-  WalletOutlined,
 } from '@ant-design/icons'
-import { Button, ConfigProvider } from 'antd'
+import { Button, ConfigProvider, Space } from 'antd'
 import { useNavigate } from 'react-router'
 import { palette } from '../../app/theme'
 import { useAuth } from '../../auth/AuthContext'
@@ -17,61 +15,54 @@ import './landing.css'
 const CAPABILITIES = [
   {
     icon: <InboxOutlined />,
-    title: 'Enquiries and bookings',
-    text: 'Capture website and staff-entered enquiries, record follow-ups and customise packages. A wedding project opens only after the agreement is signed and the booking deposit is paid.',
-  },
-  {
-    icon: <ScheduleOutlined />,
-    title: 'Weddings and functions',
-    text: 'Plan several functions per wedding with dates, venues and assigned staff. Tasks are generated from templates, and progress follows their status.',
-  },
-  {
-    icon: <ShopOutlined />,
-    title: 'Vendors and quotations',
-    text: "Keep a vendor directory, request quotations for a function or service, compare submissions and record the client's decision with its history.",
+    title: 'Persisted enquiries',
+    text: 'Public visitors can submit validated wedding and consultation details. Staff receive a searchable work queue for assignment, follow-ups and conversion.',
   },
   {
     icon: <TeamOutlined />,
-    title: 'Client portal',
-    text: 'Clients follow progress, selected vendors, quotation decisions, payments and shared documents. The primary client decides what a partner can see.',
+    title: 'Accounts and profiles',
+    text: 'Admins maintain users, staff and client profiles. Lead planners have read access to the team and can maintain client contact details.',
   },
   {
-    icon: <WalletOutlined />,
-    title: 'Budgets and approvals',
-    text: "Track original and revised budgets by category, expenses, client payments and vendor payments in INR. Expenses above a planner's limit go to an admin for approval.",
+    icon: <SafetyCertificateOutlined />,
+    title: 'Booking qualification',
+    text: 'Agreement and deposit evidence are stored against the enquiry. The backend blocks project creation until both records qualify.',
   },
   {
-    icon: <BarChartOutlined />,
-    title: 'Calendar and reports',
-    text: 'See weddings, consultations, meetings, deadlines and task due dates on one calendar, and export operational and financial reports.',
+    icon: <ProjectOutlined />,
+    title: 'Wedding projects',
+    text: 'Admins and assigned planners maintain wedding dates, venues, status and lead ownership. Clients can read only projects linked to their account.',
+  },
+  {
+    icon: <ShopOutlined />,
+    title: 'Vendor directory',
+    text: 'Admins maintain approved vendor records and account links. Planners browse approved vendors; linked vendor users see only their own profile.',
   },
 ]
 
 const WORKFLOW = [
-  { title: 'Enquiry', text: 'Contact details, dates, destination, guest estimate and budget range.' },
-  { title: 'Consultation and package', text: 'Follow-ups, requirements and a customised package.' },
-  { title: 'Agreement and deposit', text: 'The signed agreement and the paid booking deposit are both recorded.', gate: true },
-  { title: 'Wedding project', text: 'Functions, venues, staff assignments and tasks from templates.' },
-  { title: 'Vendors and quotations', text: 'Quotations compared by planners and approved by the client.' },
-  { title: 'Payments and reports', text: 'Client payments, expenses and vendor payments against the budget.' },
+  { title: 'Enquiry submitted', text: 'Contact, wedding dates, destination, guest estimate and budget range are persisted.' },
+  { title: 'Profiles prepared', text: 'The agency links the primary client and an active authorized lead planner.' },
+  { title: 'Agreement signed', text: 'A signed agreement reference, signer and timestamp are recorded.' },
+  { title: 'Deposit paid', text: 'The amount, date, method and payment reference are recorded.', gate: true },
+  { title: 'Project created', text: 'Only the qualified enquiry can become one wedding project.' },
 ]
 
 const PORTALS = [
-  { role: 'Admin', accent: 'maroon', text: 'Agency-wide view of users, vendors, projects, approvals and reports.' },
-  { role: 'Lead planner', accent: 'gold', text: 'Assigned weddings, functions, tasks, quotations and expenses within approval limits.' },
-  { role: 'Employee', accent: 'forest', text: 'Assigned weddings, tasks and deadlines, with status updates.' },
-  { role: 'Client', accent: 'maroon', text: 'Progress, selected vendors, quotation decisions, payments and shared documents.' },
-  { role: 'Vendor', accent: 'gold', text: 'Own profile, quotation requests and submissions, bookings and payment details.' },
+  { role: 'Admin', accent: 'maroon', text: 'Users, employees, clients, qualified projects and vendor directory management.' },
+  { role: 'Lead planner', accent: 'gold', text: 'Assigned projects, booking qualification, clients, staff directory and approved vendors.' },
+  { role: 'Client', accent: 'forest', text: 'A read-only view of wedding projects linked to the client account.' },
+  { role: 'Vendor', accent: 'gold', text: 'A private read-only view of the vendor profile linked to the signed-in account.' },
 ]
 
-const HERO_FACTS = ['Built for a single agency', 'Payments in INR, recorded by staff', 'A separate portal for each role']
+const HERO_FACTS = ['Real persisted enquiries', 'Server-enforced role access', 'Agreement and deposit project gate']
 
 // Gold buttons on the maroon closing band.
 const darkBandTheme = { token: { colorPrimary: palette.goldLight, colorTextLightSolid: palette.maroonDeep } }
 
 /**
- * Public introduction to the WAMS platform. It has no app shell and makes no API
- * calls; its only action is the way in to sign-in.
+ * Public introduction to the WAMS platform. It has no app shell; public visitors
+ * can submit a persisted enquiry or continue to sign-in.
  */
 export default function LandingPage() {
   const navigate = useNavigate()
@@ -98,9 +89,12 @@ export default function LandingPage() {
             <a href="#workflow">Workflow</a>
             <a href="#portals">Portals</a>
           </nav>
-          <Button type="primary" onClick={() => navigate(entry.to)}>
-            {entry.label}
-          </Button>
+          <Space>
+            <Button onClick={() => navigate('/enquire')}>Submit enquiry</Button>
+            <Button type="primary" onClick={() => navigate(entry.to)}>
+              {entry.label}
+            </Button>
+          </Space>
         </div>
       </header>
 
@@ -113,14 +107,17 @@ export default function LandingPage() {
                 Run every wedding your agency plans from one system.
               </h1>
               <p className="wams-hero__lead wams-rise" style={{ '--delay': '120ms' }}>
-                WAMS keeps enquiries, wedding projects, functions, vendors, client approvals, budgets and payments in
-                one shared record. Planners, employees, clients and vendors each work in their own portal.
+                WAMS connects validated enquiries, secure account profiles, booking qualification, wedding projects and
+                the vendor directory. Each signed-in role sees only the records its backend permissions allow.
               </p>
               <div className="wams-hero__actions wams-rise" style={{ '--delay': '180ms' }}>
-                <Button type="primary" size="large" onClick={() => navigate(entry.to)}>
-                  {isAuthenticated ? 'Open your workspace' : 'Sign in to WAMS'}
+                <Button type="primary" size="large" onClick={() => navigate('/enquire')}>
+                  Submit an enquiry
                 </Button>
-                <Button size="large" href="#capabilities">
+                <Button size="large" onClick={() => navigate(entry.to)}>
+                  {isAuthenticated ? 'Open your workspace' : 'Staff and client sign in'}
+                </Button>
+                <Button type="link" size="large" href="#capabilities">
                   See what it covers
                 </Button>
               </div>
@@ -142,8 +139,8 @@ export default function LandingPage() {
           <div className="wams-landing__container">
             <div className="wams-section__head">
               <div className="wams-eyebrow">Capabilities</div>
-              <h2 id="capabilities-title">What WAMS covers</h2>
-              <p>The records an agency needs from the first enquiry to the final payment, kept in one place.</p>
+              <h2 id="capabilities-title">Available in this build</h2>
+              <p>Every item below is connected to a persisted backend API rather than demonstration data.</p>
             </div>
             <div className="wams-cap-grid">
               {CAPABILITIES.map((capability) => (
@@ -163,8 +160,8 @@ export default function LandingPage() {
           <div className="wams-landing__container">
             <div className="wams-section__head">
               <div className="wams-eyebrow">Workflow</div>
-              <h2 id="workflow-title">From first enquiry to final payment</h2>
-              <p>Every wedding follows the same path. The project opens only once the booking is confirmed.</p>
+              <h2 id="workflow-title">From enquiry to qualified project</h2>
+              <p>The backend verifies persisted agreement and deposit records before it creates a project.</p>
             </div>
             <ol className="wams-flow">
               {WORKFLOW.map((step, index) => (
@@ -185,8 +182,8 @@ export default function LandingPage() {
           <div className="wams-landing__container">
             <div className="wams-section__head">
               <div className="wams-eyebrow">Portals</div>
-              <h2 id="portals-title">A portal for every role</h2>
-              <p>People see the weddings and records they are responsible for, and nothing else.</p>
+              <h2 id="portals-title">Current role workspaces</h2>
+              <p>Navigation follows the signed-in role, while every API request is authorized again by the server.</p>
             </div>
             <div className="wams-roles">
               {PORTALS.map((portal) => (

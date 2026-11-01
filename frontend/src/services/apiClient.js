@@ -6,9 +6,8 @@
  * - The bearer token from the current session is attached unless `auth: false`.
  * - Non-2xx responses and network failures throw `ApiError`. Its message comes
  *   from the backend's ApiError envelope when one is returned.
- * - A 401 on a request that carried a token ends the session only if the token is
- *   really rejected (checked with GET /api/auth/me). Otherwise it is reported as 403,
- *   because the backend currently answers role-denied requests with 401.
+ * - A 401 on a request that carried a token ends the browser session. Role
+ *   denials remain 403 and do not clear the session.
  *
  *   const projects = await api.get('/api/finance/projects', { query: { status: 'PLANNING' }, signal })
  *   await api.post('/api/finance/projects/12/expenses', body)
@@ -122,31 +121,8 @@ export async function apiRequest(path, { method = 'GET', body, query, signal, au
     body: data,
   })
 
-  if (response.status === 401 && token) {
-    const accepted = path === SESSION_CHECK_PATH ? false : await tokenStillAccepted(token)
-    if (accepted) {
-      // The token is valid, so this was an authorization failure the backend reported as 401
-      // (role-denied requests currently surface as 401; see GitHub issue #3). Keep the session.
-      throw new ApiError({ status: 403, message: FALLBACK_MESSAGES[403], path, body: data })
-    }
-    if (accepted === false) unauthorizedHandler?.(error)
-  }
+  if (response.status === 401 && token) unauthorizedHandler?.(error)
   throw error
-}
-
-const SESSION_CHECK_PATH = '/api/auth/me'
-
-/** true = token accepted, false = token rejected, null = could not tell (server unreachable). */
-async function tokenStillAccepted(token) {
-  try {
-    const check = await fetch(buildUrl(SESSION_CHECK_PATH), {
-      headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
-    })
-    if (check.ok) return true
-    return check.status === 401 ? false : null
-  } catch {
-    return null
-  }
 }
 
 export const api = {

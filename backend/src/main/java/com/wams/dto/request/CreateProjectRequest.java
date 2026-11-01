@@ -1,5 +1,6 @@
 package com.wams.dto.request;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -7,13 +8,14 @@ import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 
 /**
- * Request to create a WeddingProject.
+ * Request to convert a qualified enquiry into an official WeddingProject.
+ * Agreement and deposit state are deliberately absent: the service derives
+ * both from persisted records associated with {@code enquiryId}.
  *
- * The two booleans {@code agreementSigned} and {@code bookingDepositPaid}
- * MUST both be true for the service layer to accept this request. These
- * values are expected to be supplied by trusted upstream modules (agreement
- * and deposit) once they exist, not forged by an untrusted client.
+ * Unknown legacy fields (including agreementSigned/bookingDepositPaid) are
+ * ignored, but can never influence the gate.
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public record CreateProjectRequest(
         @NotBlank @Size(max = 200) String projectName,
         @NotNull Long primaryClientId,
@@ -21,6 +23,5 @@ public record CreateProjectRequest(
         @NotNull Long leadPlannerId,
         @NotNull LocalDate weddingDate,
         @Size(max = 300) String venue,
-        @NotNull Boolean agreementSigned,
-        @NotNull Boolean bookingDepositPaid
+        @NotNull Long enquiryId
 ) {}

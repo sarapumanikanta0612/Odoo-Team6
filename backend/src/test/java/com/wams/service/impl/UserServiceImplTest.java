@@ -4,10 +4,12 @@ import com.wams.dto.request.CreateUserRequest;
 import com.wams.dto.request.RegisterRequest;
 import com.wams.dto.request.UpdateUserRequest;
 import com.wams.dto.response.UserResponse;
+import com.wams.entity.Client;
 import com.wams.entity.User;
 import com.wams.enums.Role;
 import com.wams.exception.DuplicateResourceException;
 import com.wams.exception.ResourceNotFoundException;
+import com.wams.repository.ClientRepository;
 import com.wams.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -29,12 +31,13 @@ import static org.mockito.Mockito.*;
 class UserServiceImplTest {
 
     @Mock UserRepository userRepository;
+    @Mock ClientRepository clientRepository;
     @Mock PasswordEncoder passwordEncoder;
     @InjectMocks UserServiceImpl service;
 
     @Test
     void create_persistsHashedPassword_andNormalizesEmail() {
-        when(userRepository.existsByEmailIgnoreCase("Alice@Example.com")).thenReturn(false);
+        when(userRepository.existsByEmailIgnoreCase("alice@example.com")).thenReturn(false);
         when(passwordEncoder.encode("s3cret-pass")).thenReturn("$2a$HASHED");
         when(userRepository.save(any(User.class))).thenAnswer(inv -> {
             User u = inv.getArgument(0);
@@ -55,6 +58,25 @@ class UserServiceImplTest {
         assertThat(saved.getPasswordHash()).isEqualTo("$2a$HASHED");
         assertThat(saved.getRole()).isEqualTo(Role.LEAD_PLANNER);
         assertThat(saved.isActive()).isTrue();
+        verifyNoInteractions(clientRepository);
+    }
+
+    @Test
+    void create_clientRoleAlsoCreatesLinkedProfile() {
+        when(userRepository.existsByEmailIgnoreCase("client@example.com")).thenReturn(false);
+        when(passwordEncoder.encode(anyString())).thenReturn("HASH");
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+            User user = invocation.getArgument(0);
+            user.setId(81L);
+            return user;
+        });
+
+        service.create(new CreateUserRequest(
+                "Client", " Client@Example.com ", "s3cret-pass", Role.PRIMARY_CLIENT, true));
+
+        verify(clientRepository).save(argThat(client ->
+                client.getUser().getId().equals(81L)
+                        && client.getUser().getRole() == Role.PRIMARY_CLIENT));
     }
 
     @Test
@@ -71,16 +93,42 @@ class UserServiceImplTest {
     }
 
     @Test
-    void register_alwaysAssignsPrimaryClientRole() {
+    void register_alwaysAssignsPrimaryClientRole_andCreatesLinkedClientProfile() {
         when(userRepository.existsByEmailIgnoreCase(anyString())).thenReturn(false);
         when(passwordEncoder.encode(anyString())).thenReturn("HASH");
-        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> {
+            User user = inv.getArgument(0);
+            user.setId(72L);
+            return user;
+        });
+        when(clientRepository.save(any(Client.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        service.register(new RegisterRequest("Bob", "bob@x.com", "s3cret-pass"));
+        service.register(new RegisterRequest("Bob", " BOB@x.com ", "s3cret-pass"));
 
-        ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
-        verify(userRepository).save(captor.capture());
-        assertThat(captor.getValue().getRole()).isEqualTo(Role.PRIMARY_CLIENT);
+        verify(userRepository).existsByEmailIgnoreCase("bob@x.com");
+
+        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(userCaptor.capture());
+        User savedUser = userCaptor.getValue();
+        assertThat(savedUser.getRole()).isEqualTo(Role.PRIMARY_CLIENT);
+
+        ArgumentCaptor<Client> clientCaptor = ArgumentCaptor.forClass(Client.class);
+        verify(clientRepository).save(clientCaptor.capture());
+        assertThat(clientCaptor.getValue().getUser()).isSameAs(savedUser);
+        assertThat(clientCaptor.getValue().getUser().getId()).isEqualTo(72L);
+    }
+
+    @Test
+    void register_duplicateEmail_createsNeitherUserNorClientProfile() {
+        when(userRepository.existsByEmailIgnoreCase(anyString())).thenReturn(true);
+
+        assertThatThrownBy(() -> service.register(
+                new RegisterRequest("Bob", "bob@x.com", "s3cret-pass")))
+                .isInstanceOf(DuplicateResourceException.class);
+
+        verify(userRepository, never()).save(any());
+        verifyNoInteractions(clientRepository);
+        verifyNoInteractions(passwordEncoder);
     }
 
     @Test

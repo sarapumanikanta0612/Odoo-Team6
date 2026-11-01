@@ -11,6 +11,7 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Date;
+import java.util.Locale;
 
 /**
  * Minimal HS256 JWT issuance + validation.
@@ -28,10 +29,25 @@ public class JwtService {
             @Value("${app.jwt.expiration-ms}") long expirationMs,
             @Value("${app.jwt.issuer}") String issuer
     ) {
+        if (secret == null || secret.isBlank()) {
+            throw new IllegalStateException("JWT_SECRET is required");
+        }
         byte[] keyBytes = secret.getBytes(StandardCharsets.UTF_8);
         if (keyBytes.length < 32) {
             throw new IllegalStateException(
-                    "app.jwt.secret must be at least 32 bytes (256 bits) for HS256");
+                    "JWT_SECRET must contain at least 32 bytes (256 bits) for HS256");
+        }
+        String normalizedSecret = secret.toLowerCase(Locale.ROOT);
+        if (normalizedSecret.contains("change-me")
+                || normalizedSecret.contains("placeholder")
+                || normalizedSecret.contains("insecure")) {
+            throw new IllegalStateException("JWT_SECRET must not be a placeholder or known insecure value");
+        }
+        if (expirationMs <= 0) {
+            throw new IllegalStateException("app.jwt.expiration-ms must be greater than zero");
+        }
+        if (issuer == null || issuer.isBlank()) {
+            throw new IllegalStateException("app.jwt.issuer is required");
         }
         this.signingKey = Keys.hmacShaKeyFor(keyBytes);
         this.expirationMs = expirationMs;

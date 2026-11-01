@@ -2,6 +2,8 @@ package com.wams.config;
 
 import com.wams.entity.User;
 import com.wams.enums.Role;
+import com.wams.repository.ClientRepository;
+import com.wams.repository.EmployeeRepository;
 import com.wams.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,12 +27,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(properties = {
         "app.bootstrap.admin.email=bootstrap-admin@wams.test",
         "app.bootstrap.admin.password=s3cret-admin-pass",
-        "app.bootstrap.admin.full-name=Bootstrap Admin"
+        "app.bootstrap.admin.full-name=Bootstrap Admin",
+        "app.bootstrap.admin.employee-code=BOOTSTRAP-ADMIN"
 })
 @AutoConfigureMockMvc
 class AdminBootstrapperIntegrationTest {
 
     @Autowired UserRepository userRepository;
+    @Autowired ClientRepository clientRepository;
+    @Autowired EmployeeRepository employeeRepository;
     @Autowired PasswordEncoder passwordEncoder;
     @Autowired AdminBootstrapper bootstrapper;
     @Autowired MockMvc mvc;
@@ -47,6 +52,13 @@ class AdminBootstrapperIntegrationTest {
         assertThat(passwordEncoder.matches("s3cret-admin-pass", admin.get().getPasswordHash()))
                 .as("BCrypt match should succeed")
                 .isTrue();
+        assertThat(employeeRepository.findByUserId(admin.get().getId()))
+                .as("Bootstrap ADMIN needs an Employee profile so it can lead projects")
+                .get()
+                .satisfies(employee -> {
+                    assertThat(employee.getEmployeeCode()).isEqualTo("BOOTSTRAP-ADMIN");
+                    assertThat(employee.isActive()).isTrue();
+                });
     }
 
     @Test
@@ -58,9 +70,12 @@ class AdminBootstrapperIntegrationTest {
         // prevents a duplicate ADMIN row, which is the same behavior that
         // would protect a real application restart against the same DB.
         long adminsBefore = userRepository.findAllByRole(Role.ADMIN).size();
+        long employeesBefore = employeeRepository.count();
         bootstrapper.run(null);
         long adminsAfter = userRepository.findAllByRole(Role.ADMIN).size();
+        long employeesAfter = employeeRepository.count();
         assertThat(adminsAfter).isEqualTo(adminsBefore);
+        assertThat(employeesAfter).isEqualTo(employeesBefore);
     }
 
     @Test
@@ -86,5 +101,8 @@ class AdminBootstrapperIntegrationTest {
         assertThat(created.getRole())
                 .as("Public registration must never produce an ADMIN")
                 .isEqualTo(Role.PRIMARY_CLIENT);
+        assertThat(clientRepository.findByUserId(created.getId()))
+                .as("Registration must atomically create the required Client profile")
+                .isPresent();
     }
 }

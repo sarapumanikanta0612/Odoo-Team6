@@ -8,8 +8,14 @@ import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.wams.entity.User;
+import com.wams.enums.Role;
+import com.wams.repository.UserRepository;
+import com.wams.security.JwtService;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -32,6 +38,8 @@ class SecurityConfigIntegrationTest {
             """;
 
     @Autowired MockMvc mvc;
+    @Autowired UserRepository userRepository;
+    @Autowired JwtService jwtService;
 
     // --- 1. Anonymous POST /api/public/enquiries reaches the controller ---
 
@@ -81,7 +89,12 @@ class SecurityConfigIntegrationTest {
     @Test
     void anonymous_getUsers_returns401() throws Exception {
         mvc.perform(get("/api/users"))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isUnauthorized())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.error").value("Unauthorized"))
+                .andExpect(jsonPath("$.message").value("Authentication required"))
+                .andExpect(jsonPath("$.path").value("/api/users"));
     }
 
     @Test
@@ -106,7 +119,12 @@ class SecurityConfigIntegrationTest {
         // Role-based rules must still work: EMPLOYEE is authenticated but
         // /api/users/** requires ROLE_ADMIN.
         mvc.perform(get("/api/users"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isForbidden())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.error").value("Forbidden"))
+                .andExpect(jsonPath("$.message").value("Access denied"))
+                .andExpect(jsonPath("$.path").value("/api/users"));
     }
 
     @Test
@@ -115,6 +133,53 @@ class SecurityConfigIntegrationTest {
         // /api/clients/** requires ADMIN or LEAD_PLANNER.
         mvc.perform(get("/api/clients"))
                 .andExpect(status().isForbidden());
+    }
+
+    // --- Persisted account state overrides stale JWT claims ---
+
+    @Test
+    void bearerToken_forDisabledUser_returnsJson401Immediately() throws Exception {
+        User user = saveUser("disabled-token@wams.test", Role.LEAD_PLANNER);
+        String token = jwtService.generateToken(user);
+        user.setActive(false);
+        userRepository.saveAndFlush(user);
+
+        mvc.perform(get("/api/clients").header("Authorization", "Bearer " + token))
+                .andExpect(status().isUnauthorized())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.message").value("Authentication required"));
+    }
+
+    @Test
+    void bearerToken_usesCurrentPersistedRole_notStaleRoleClaim() throws Exception {
+        User user = saveUser("changed-role-token@wams.test", Role.LEAD_PLANNER);
+        String token = jwtService.generateToken(user);
+        user.setRole(Role.EMPLOYEE);
+        userRepository.saveAndFlush(user);
+
+        mvc.perform(get("/api/clients").header("Authorization", "Bearer " + token))
+                .andExpect(status().isForbidden())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(403));
+    }
+
+    @Test
+    void malformedBearerToken_onProtectedRoute_returnsJson401() throws Exception {
+        mvc.perform(get("/api/users").header("Authorization", "Bearer not-a-jwt"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(401));
+    }
+
+    private User saveUser(String email, Role role) {
+        return userRepository.saveAndFlush(User.builder()
+                .fullName(email)
+                .email(email)
+                .passwordHash("not-used-by-token-tests")
+                .role(role)
+                .active(true)
+                .build());
     }
 
     // --- Health endpoint sanity ---

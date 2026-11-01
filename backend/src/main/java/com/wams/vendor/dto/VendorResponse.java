@@ -8,6 +8,7 @@ import java.time.Instant;
 
 public record VendorResponse(
         Long id,
+        Long userId,
         String businessName,
         VendorCategory category,
         String contactPerson,
@@ -23,6 +24,7 @@ public record VendorResponse(
     public static VendorResponse from(Vendor vendor) {
         return new VendorResponse(
                 vendor.getId(),
+                vendor.getUser() == null ? null : vendor.getUser().getId(),
                 vendor.getBusinessName(),
                 vendor.getCategory(),
                 vendor.getContactPerson(),

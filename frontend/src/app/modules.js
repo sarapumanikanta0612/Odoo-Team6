@@ -22,28 +22,28 @@
  * To register a module, import its descriptor below and add it to `modules`.
  * Only register modules whose pages call real APIs.
  */
+import clientsModule from '../modules/clients'
+import employeesModule from '../modules/employees'
+import enquiriesModule from '../modules/enquiries'
+import projectsModule from '../modules/projects'
+import quotationsModule from '../modules/quotations'
+import tasksModule from '../modules/tasks'
+import usersModule from '../modules/users'
+import vendorsModule from '../modules/vendors'
 import { hasAnyRole } from '../auth/roles'
+import { SECTIONS, SECTION_ORDER } from './moduleSections'
 
-export const SECTIONS = Object.freeze({
-  OVERVIEW: 'Overview',
-  OPERATIONS: 'Operations',
-  PARTNERS: 'Vendors and clients',
-  FINANCE: 'Finance',
-  INSIGHTS: 'Insights',
-  OTHER: 'Other',
-})
-
-const SECTION_ORDER = [
-  SECTIONS.OVERVIEW,
-  SECTIONS.OPERATIONS,
-  SECTIONS.PARTNERS,
-  SECTIONS.FINANCE,
-  SECTIONS.INSIGHTS,
-  SECTIONS.OTHER,
-]
+export { SECTIONS } from './moduleSections'
 
 export const modules = [
-  // One import and one entry per module, e.g. `financeModule`.
+  usersModule,
+  employeesModule,
+  enquiriesModule,
+  projectsModule,
+  quotationsModule,
+  tasksModule,
+  clientsModule,
+  vendorsModule,
 ]
 
 /** Modules the user may see, sorted by section and order. */
@@ -76,7 +76,7 @@ function sectionIndex(section) {
 
 // Catch registration mistakes early in development.
 if (import.meta.env.DEV) {
-  const required = ['key', 'label', 'path', 'routes']
+  const required = ['key', 'label', 'path', 'roles', 'routes']
   const seenKeys = new Set()
   const seenPaths = new Set()
   for (const module of modules) {

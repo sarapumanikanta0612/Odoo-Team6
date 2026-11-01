@@ -46,6 +46,12 @@ public class VendorController {
         return new PagedModel<>(vendorService.search(status, category, search, isAdmin(authentication), pageable));
     }
 
+    @GetMapping("/me")
+    @PreAuthorize("hasRole('VENDOR')")
+    public VendorResponse getMine() {
+        return vendorService.getMine();
+    }
+
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'LEAD_PLANNER')")
     public VendorResponse getById(@PathVariable Long id, Authentication authentication) {
